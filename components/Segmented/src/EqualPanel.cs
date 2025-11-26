@@ -12,12 +12,12 @@ namespace CommunityToolkit.WinUI.Controls;
 /// </summary>
 public partial class EqualPanel : Panel
 {
-    private double _maxItemWidth = 0;
-    private double _maxItemHeight = 0;
+    private double _maxOffAxis = 0;
+    private double _totalPortions = 0;
     private int _visibleItemsCount = 0;
 
     /// <summary>
-    /// Identifies the Spacing dependency property.
+    /// Identifies the <see cref="Spacing"/> dependency property.
     /// </summary>
     /// <returns>The identifier for the <see cref="Spacing"/> dependency property.</returns>
     public static readonly DependencyProperty SpacingProperty = DependencyProperty.Register(
@@ -34,6 +34,24 @@ public partial class EqualPanel : Panel
         typeof(Orientation),
         typeof(EqualPanel),
         new PropertyMetadata(default(Orientation), OnPropertyChanged));
+
+    /// <summary>
+    /// An attached property for identifying the proportional factor of the panel for a child to consume.
+    /// </summary>
+    public static readonly DependencyProperty FactorProperty =
+        DependencyProperty.RegisterAttached(
+            "Factor",
+            typeof(double),
+            typeof(EqualPanel),
+            new PropertyMetadata(1d));
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="EqualPanel"/> class.
+    /// </summary>
+    public EqualPanel()
+    {
+        RegisterPropertyChangedCallback(HorizontalAlignmentProperty, OnAlignmentChanged);
+    }
 
     /// <summary>
     /// Gets or sets the spacing between items.
@@ -54,101 +72,108 @@ public partial class EqualPanel : Panel
     }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="EqualPanel"/> class.
+    /// Gets the proportional size of item in the <see cref="EqualPanel"/>.
     /// </summary>
-    public EqualPanel()
-    {
-        RegisterPropertyChangedCallback(HorizontalAlignmentProperty, OnAlignmentChanged);
-    }
+    public static double GetFactor(DependencyObject obj) => (double)obj.GetValue(FactorProperty);
+
+    /// <summary>
+    /// Sets the proportional size of item in the <see cref="EqualPanel"/>.
+    /// </summary>
+    public static void SetFactor(DependencyObject obj, double value) => obj.SetValue(FactorProperty, value);
 
     /// <inheritdoc/>
     protected override Size MeasureOverride(Size availableSize)
     {
-        _maxItemWidth = 0;
-        _maxItemHeight = 0;
+        _maxOffAxis = 0;
+        _totalPortions = 0;
 
         var elements = Children.Where(static e => e.Visibility == Visibility.Visible);
         _visibleItemsCount = elements.Count();
 
+        double portionSize = 0;
         foreach (var child in elements)
         {
             child.Measure(availableSize);
-            _maxItemWidth = Math.Max(_maxItemWidth, child.DesiredSize.Width);
-            _maxItemHeight = Math.Max(_maxItemHeight, child.DesiredSize.Height);
-        }
 
-        if (_visibleItemsCount > 0)
-        {
-            bool stretch = Orientation switch
+            // Get desired sizes in UV coordinates
+            double desiredU, desiredV;
+            (desiredU, desiredV) = Orientation switch
             {
-                Orientation.Horizontal => HorizontalAlignment is HorizontalAlignment.Stretch && !double.IsInfinity(availableSize.Width),
-                Orientation.Vertical or _ => VerticalAlignment is VerticalAlignment.Stretch && !double.IsInfinity(availableSize.Height),
+                Orientation.Horizontal => (child.DesiredSize.Width, child.DesiredSize.Height),
+                Orientation.Vertical or _ => (child.DesiredSize.Height, child.DesiredSize.Width),
             };
 
-            // Define XY coords
-            double xSize = 0, ySize = 0;
+            // Adjust proportions according to U axis
+            var factor = (double)child.GetValue(FactorProperty);
+            portionSize = Math.Max(portionSize, desiredU / factor);
+            _totalPortions += factor;
 
-            // Define UV coords for orientation agnostic XY manipulation
-            ref double uSize = ref SelectAxis(Orientation, ref xSize, ref ySize, true);
-            ref double vSize = ref SelectAxis(Orientation, ref xSize, ref ySize, false);
-            ref double maxItemU = ref SelectAxis(Orientation, ref _maxItemWidth, ref _maxItemHeight, true);
-            ref double maxItemV = ref SelectAxis(Orientation, ref _maxItemWidth, ref _maxItemHeight, false);
-            double availableU = Orientation is Orientation.Horizontal ? availableSize.Width : availableSize.Height;
+            // Track V axis max
+            _maxOffAxis = Math.Max(_maxOffAxis, desiredV);
+        }
 
-            if (stretch)
-            {
-                // Adjust maxItemU to form equal rows/columns by available U space (adjust for spacing)
-                double totalU = availableU - (Spacing * (_visibleItemsCount - 1));
-                maxItemU = totalU / _visibleItemsCount;
+        // Do nothing if the panel is empty
+        if (_visibleItemsCount <= 0)
+            return new Size(0, 0);
 
-                // Set uSize/vSize for XY result construction
-                uSize = availableU;
-                vSize = maxItemV;
-            }
-            else
-            {
-                uSize = (maxItemU * _visibleItemsCount) + (Spacing * (_visibleItemsCount - 1));
-                vSize = maxItemV;
-            }
+        bool stretch = Orientation switch
+        {
+            Orientation.Horizontal => HorizontalAlignment is HorizontalAlignment.Stretch && !double.IsInfinity(availableSize.Width),
+            Orientation.Vertical or _ => VerticalAlignment is VerticalAlignment.Stretch && !double.IsInfinity(availableSize.Height),
+        };
 
-            return new Size(xSize, ySize);
+        // Define XY coords
+        double xSize = 0, ySize = 0;
+
+        // Define UV coords for orientation agnostic XY manipulation
+        ref double uSize = ref SelectAxis(Orientation, ref xSize, ref ySize, true);
+        ref double vSize = ref SelectAxis(Orientation, ref xSize, ref ySize, false);
+        double availableU = Orientation is Orientation.Horizontal ? availableSize.Width : availableSize.Height;
+
+        if (stretch)
+        {
+            // Set uSize/vSize for XY result construction
+            uSize = availableU;
+            vSize = _maxOffAxis;
         }
         else
         {
-            return new Size(0, 0);
+            uSize = (portionSize * _totalPortions) + (Spacing * (_visibleItemsCount - 1));
+            vSize = _maxOffAxis;
         }
+
+        return new Size(xSize, ySize);
     }
 
     /// <inheritdoc/>
     protected override Size ArrangeOverride(Size finalSize)
     {
-        // Define X and Y
+        // Define X/Y coordinate variables
         double x = 0;
         double y = 0;
+        double width = 0;
+        double height = 0;
 
         // Define UV axis
-        ref double u = ref x;
-        ref double maxItemU = ref _maxItemWidth;
-        double finalSizeU = finalSize.Width;
-        if (Orientation is Orientation.Vertical)
-        {
-            u = ref y;
-            maxItemU = ref _maxItemHeight;
-            finalSizeU = finalSize.Height;
-        }
-        
-        // Check if there's more (little) width available - if so, set max item width to the maximum possible as we have an almost perfect height.
-        if (finalSizeU > _visibleItemsCount * maxItemU + (Spacing * (_visibleItemsCount - 1)))
-        {
-            maxItemU = (finalSizeU - (Spacing * (_visibleItemsCount - 1))) / _visibleItemsCount;
-        }
+        ref double u = ref SelectAxis(Orientation, ref x, ref y, true);
+        ref double uSize = ref SelectAxis(Orientation, ref width, ref height, true);
+        ref double vSize = ref SelectAxis(Orientation, ref width, ref height, false);
+        double finalSizeU = Orientation is Orientation.Horizontal ? finalSize.Width : finalSize.Height;
 
+        // Determine the size of a portion within the final size
+        var spacingTotalSize = Spacing * (_visibleItemsCount - 1);
+        var portionSize = (finalSizeU - spacingTotalSize) / _totalPortions;
+        vSize = _maxOffAxis;
+        
         var elements = Children.Where(static e => e.Visibility == Visibility.Visible);
         foreach (var child in elements)
         {
+            var factor = (double)child.GetValue(FactorProperty);
+            uSize = factor * portionSize;
+
             // NOTE: The arrange method is still in X/Y coordinate system
-            child.Arrange(new Rect(x, y, _maxItemWidth, _maxItemHeight));
-            u += maxItemU + Spacing;
+            child.Arrange(new Rect(x, y, width, height));
+            u += uSize + Spacing;
         }
         return finalSize;
     }
