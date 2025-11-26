@@ -46,5 +46,24 @@
                                     Icon="{ui:FontIcon Glyph=&#xE787;}"
                                     ToolTipService.ToolTip="Month view" />
         </controls:Segmented>
+
+        <TextBlock Margin="0,24,0,0"
+                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                   Text="Simple Widths" />
+        <controls:Segmented Orientation="{x:Bind local:SegmentedStylesSample.ConvertStringToOrientation(OrientationMode), Mode=OneWay}"
+                            SelectedIndex="0"
+                            SelectionMode="{x:Bind local:SegmentedStylesSample.ConvertStringToSelectionMode(SelectionMode), Mode=OneWay}">
+            <controls:Segmented.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel ui:FrameworkElementExtensions.AncestorType="controls:Segmented"
+                                Orientation="{Binding (ui:FrameworkElementExtensions.Ancestor).Orientation, RelativeSource={RelativeSource Self}}"
+                                Spacing="{ThemeResource SegmentedItemSpacing}" />
+                </ItemsPanelTemplate>
+            </controls:Segmented.ItemsPanel>
+            <controls:SegmentedItem Width="100">Item 1</controls:SegmentedItem>
+            <controls:SegmentedItem>Item 2</controls:SegmentedItem>
+            <controls:SegmentedItem>Item with long label</controls:SegmentedItem>
+            <controls:SegmentedItem>Item 4</controls:SegmentedItem>
+        </controls:Segmented>
     </StackPanel>
 </Page>
