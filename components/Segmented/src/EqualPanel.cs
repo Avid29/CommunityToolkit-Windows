@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.UI.Xaml.Controls;
 using System.Data;
 
 namespace CommunityToolkit.WinUI.Controls;
@@ -116,6 +115,8 @@ public partial class EqualPanel : Panel
         if (_visibleItemsCount <= 0)
             return new Size(0, 0);
 
+        // Determine if the desired alignment is stretched.
+        // Don't stretch if infinite space is available though. Attempting to divide infinite space will result in a crash.
         bool stretch = Orientation switch
         {
             Orientation.Horizontal => HorizontalAlignment is HorizontalAlignment.Stretch && !double.IsInfinity(availableSize.Width),
@@ -126,20 +127,19 @@ public partial class EqualPanel : Panel
         double xSize = 0, ySize = 0;
 
         // Define UV coords for orientation agnostic XY manipulation
-        ref double uSize = ref SelectAxis(Orientation, ref xSize, ref ySize, true);
-        ref double vSize = ref SelectAxis(Orientation, ref xSize, ref ySize, false);
+        var size = new UVCoord(ref xSize, ref ySize, Orientation);
         double availableU = Orientation is Orientation.Horizontal ? availableSize.Width : availableSize.Height;
 
         if (stretch)
         {
             // Set uSize/vSize for XY result construction
-            uSize = availableU;
-            vSize = _maxOffAxis;
+            size.U = availableU;
+            size.V = _maxOffAxis;
         }
         else
         {
-            uSize = (portionSize * _totalPortions) + (Spacing * (_visibleItemsCount - 1));
-            vSize = _maxOffAxis;
+            size.U = (portionSize * _totalPortions) + (Spacing * (_visibleItemsCount - 1));
+            size.V = _maxOffAxis;
         }
 
         return new Size(xSize, ySize);
@@ -155,25 +155,24 @@ public partial class EqualPanel : Panel
         double height = 0;
 
         // Define UV axis
-        ref double u = ref SelectAxis(Orientation, ref x, ref y, true);
-        ref double uSize = ref SelectAxis(Orientation, ref width, ref height, true);
-        ref double vSize = ref SelectAxis(Orientation, ref width, ref height, false);
+        var pos = new UVCoord(ref x, ref y, Orientation);
+        var size = new UVCoord(ref width, ref height, Orientation);
         double finalSizeU = Orientation is Orientation.Horizontal ? finalSize.Width : finalSize.Height;
 
         // Determine the size of a portion within the final size
         var spacingTotalSize = Spacing * (_visibleItemsCount - 1);
         var portionSize = (finalSizeU - spacingTotalSize) / _totalPortions;
-        vSize = _maxOffAxis;
-        
+        size.V = _maxOffAxis;
+
         var elements = Children.Where(static e => e.Visibility == Visibility.Visible);
         foreach (var child in elements)
         {
             var factor = (double)child.GetValue(FactorProperty);
-            uSize = factor * portionSize;
+            size.U = factor * portionSize;
 
             // NOTE: The arrange method is still in X/Y coordinate system
             child.Arrange(new Rect(x, y, width, height));
-            u += uSize + Spacing;
+            pos.U += size.U + Spacing;
         }
         return finalSize;
     }
@@ -189,11 +188,55 @@ public partial class EqualPanel : Panel
         panel.InvalidateMeasure();
     }
 
-    private static ref double SelectAxis(Orientation orientation, ref double x, ref double y, bool u)
+    /// <summary>
+    /// A struct for mapping X/Y coordinates to an orientation adjusted U/V coordinate system.
+    /// </summary>
+    private ref struct UVCoord
     {
-        if ((orientation is Orientation.Horizontal && u) || (orientation is Orientation.Vertical && !u))
-            return ref x;
-        else
-            return ref y;
+        private readonly bool _vertical;
+
+        private ref double _x;
+        private ref double _y;
+
+        public UVCoord(ref double x, ref double y, Orientation orientation)
+        {
+            _x = ref x;
+            _y = ref y;
+            _vertical = orientation is Orientation.Vertical;
+        }
+
+        public ref double X => ref _x;
+
+        public ref double Y => ref _y;
+
+        public ref double U
+        {
+            get
+            {
+                if (_vertical)
+                {
+                    return ref Y;
+                }
+                else
+                {
+                    return ref X;
+                }
+            }
+        }
+
+        public ref double V
+        {
+            get
+            {
+                if (_vertical)
+                {
+                    return ref X;
+                }
+                else
+                {
+                    return ref Y;
+                }
+            }
+        }
     }
 }
