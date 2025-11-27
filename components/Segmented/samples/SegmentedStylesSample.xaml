@@ -57,7 +57,7 @@
             <controls:SegmentedItem>Item 3</controls:SegmentedItem>
             <controls:SegmentedItem>Item with long label</controls:SegmentedItem>
             <controls:SegmentedItem controls:EqualPanel.Factor="100">100px</controls:SegmentedItem>
-            <controls:SegmentedItem controls:EqualPanel.Factor="auto">Auto Sized</controls:SegmentedItem>
+            <controls:SegmentedItem controls:EqualPanel.Factor="auto">Auto</controls:SegmentedItem>
         </controls:Segmented>
     </StackPanel>
 </Page>

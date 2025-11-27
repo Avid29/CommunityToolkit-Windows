@@ -43,7 +43,7 @@ public partial class EqualPanel : Panel
             "Factor",
             typeof(GridLength),
             typeof(EqualPanel),
-            new PropertyMetadata(new GridLength(1, GridUnitType.Star)));
+            new PropertyMetadata(GridLength.Auto));
 
     /// <summary>
     /// Creates a new instance of the <see cref="EqualPanel"/> class.
