@@ -12,6 +12,7 @@ namespace CommunityToolkit.WinUI.Controls;
 public partial class EqualPanel : Panel
 {
     private double _maxOffAxis = 0;
+    private double _reservedSize = 0;
     private double _totalPortions = 0;
     private int _visibleItemsCount = 0;
 
@@ -40,9 +41,9 @@ public partial class EqualPanel : Panel
     public static readonly DependencyProperty FactorProperty =
         DependencyProperty.RegisterAttached(
             "Factor",
-            typeof(double),
+            typeof(GridLength),
             typeof(EqualPanel),
-            new PropertyMetadata(1d));
+            new PropertyMetadata(new GridLength(1, GridUnitType.Star)));
 
     /// <summary>
     /// Creates a new instance of the <see cref="EqualPanel"/> class.
@@ -73,17 +74,18 @@ public partial class EqualPanel : Panel
     /// <summary>
     /// Gets the proportional size of item in the <see cref="EqualPanel"/>.
     /// </summary>
-    public static double GetFactor(DependencyObject obj) => (double)obj.GetValue(FactorProperty);
+    public static GridLength GetFactor(DependencyObject obj) => (GridLength)obj.GetValue(FactorProperty);
 
     /// <summary>
     /// Sets the proportional size of item in the <see cref="EqualPanel"/>.
     /// </summary>
-    public static void SetFactor(DependencyObject obj, double value) => obj.SetValue(FactorProperty, value);
+    public static void SetFactor(DependencyObject obj, GridLength value) => obj.SetValue(FactorProperty, value);
 
     /// <inheritdoc/>
     protected override Size MeasureOverride(Size availableSize)
     {
         _maxOffAxis = 0;
+        _reservedSize = 0;
         _totalPortions = 0;
 
         var elements = Children.Where(static e => e.Visibility == Visibility.Visible);
@@ -102,13 +104,26 @@ public partial class EqualPanel : Panel
                 Orientation.Vertical or _ => (child.DesiredSize.Height, child.DesiredSize.Width),
             };
 
-            // Adjust proportions according to U axis
-            var factor = (double)child.GetValue(FactorProperty);
-            portionSize = Math.Max(portionSize, desiredU / factor);
-            _totalPortions += factor;
-
             // Track V axis max
             _maxOffAxis = Math.Max(_maxOffAxis, desiredV);
+
+            // Adjust proportions according to U axis
+            var factor = (GridLength)child.GetValue(FactorProperty);
+
+            switch (factor.GridUnitType)
+            {
+                case GridUnitType.Auto:
+                    _reservedSize += desiredU;
+                    break;
+                case GridUnitType.Pixel:
+                    _reservedSize += factor.Value;
+                    break;
+                case GridUnitType.Star:
+                    var itemPortions = factor.Value;
+                    portionSize = Math.Max(portionSize, desiredU / itemPortions);
+                    _totalPortions += itemPortions;
+                    break;
+            }
         }
 
         // Do nothing if the panel is empty
@@ -138,7 +153,7 @@ public partial class EqualPanel : Panel
         }
         else
         {
-            size.U = (portionSize * _totalPortions) + (Spacing * (_visibleItemsCount - 1));
+            size.U = (portionSize * _totalPortions) + _reservedSize + (Spacing * (_visibleItemsCount - 1));
             size.V = _maxOffAxis;
         }
 
@@ -161,14 +176,28 @@ public partial class EqualPanel : Panel
 
         // Determine the size of a portion within the final size
         var spacingTotalSize = Spacing * (_visibleItemsCount - 1);
-        var portionSize = (finalSizeU - spacingTotalSize) / _totalPortions;
+        var portionSize = (finalSizeU - spacingTotalSize - _reservedSize) / _totalPortions;
         size.V = _maxOffAxis;
 
         var elements = Children.Where(static e => e.Visibility == Visibility.Visible);
         foreach (var child in elements)
         {
-            var factor = (double)child.GetValue(FactorProperty);
-            size.U = factor * portionSize;
+            var factor = (GridLength)child.GetValue(FactorProperty);
+
+            switch (factor.GridUnitType)
+            {
+                case GridUnitType.Auto:
+                    double desiredWidth = child.DesiredSize.Width, desiredHeight = child.DesiredSize.Height;
+                    var desiredSize = new UVCoord(ref desiredWidth, ref desiredHeight, Orientation);
+                    size.U = desiredSize.U;
+                    break;
+                case GridUnitType.Pixel:
+                    size.U = factor.Value;
+                    break;
+                case GridUnitType.Star:
+                    size.U = factor.Value * portionSize;
+                    break;
+            }
 
             // NOTE: The arrange method is still in X/Y coordinate system
             child.Arrange(new Rect(x, y, width, height));

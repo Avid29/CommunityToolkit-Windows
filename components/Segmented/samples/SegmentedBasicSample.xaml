@@ -17,8 +17,7 @@
                             Orientation="{x:Bind local:SegmentedBasicSample.ConvertStringToOrientation(OrientationMode), Mode=OneWay}"
                             SelectedIndex="0"
                             SelectionMode="{x:Bind local:SegmentedBasicSample.ConvertStringToSelectionMode(SelectionMode), Mode=OneWay}">
-            <controls:SegmentedItem controls:EqualPanel.Factor="1.5"
-                                    Content="Larger Item"
+            <controls:SegmentedItem Content="Larger Item"
                                     Icon="{ui:FontIcon Glyph=&#xEA3A;}" />
             <controls:SegmentedItem Content="Item 2"
                                     Icon="{ui:FontIcon Glyph=&#xEA3A;}" />
@@ -35,8 +34,7 @@
                             Orientation="{x:Bind local:SegmentedBasicSample.ConvertStringToOrientation(OrientationMode), Mode=OneWay}"
                             SelectedIndex="2"
                             SelectionMode="{x:Bind local:SegmentedBasicSample.ConvertStringToSelectionMode(SelectionMode), Mode=OneWay}">
-            <controls:SegmentedItem controls:EqualPanel.Factor="2"
-                                    Icon="{ui:FontIcon Glyph=&#xE8BF;}"
+            <controls:SegmentedItem Icon="{ui:FontIcon Glyph=&#xE8BF;}"
                                     ToolTipService.ToolTip="Day view" />
             <controls:SegmentedItem Icon="{ui:FontIcon Glyph=&#xE8C0;}"
                                     ToolTipService.ToolTip="Week view" />
