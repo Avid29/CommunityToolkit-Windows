@@ -2,12 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using CommunityToolkit.WinUI.ConvertersRns;
+
 namespace CommunityToolkit.WinUI.Converters;
 
 /// <summary>
 /// This class converts a boolean value into a Visibility enumeration.
 /// </summary>
-public partial class BoolToVisibilityConverter : BoolToObjectConverter
+public partial class BoolToVisibilityConverter : BoolToObjectConverter, IStaticConverter<bool, Visibility>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BoolToVisibilityConverter"/> class.
@@ -16,5 +18,11 @@ public partial class BoolToVisibilityConverter : BoolToObjectConverter
     {
         TrueValue = Visibility.Visible;
         FalseValue = Visibility.Collapsed;
+    }
+
+    /// <inheritdoc/>
+    public static Visibility Convert(bool value)
+    {
+        return value ? Visibility.Visible : Visibility.Collapsed;
     }
 }

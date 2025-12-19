@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using CommunityToolkit.WinUI.ConvertersRns;
 using Windows.UI;
 
 namespace CommunityToolkit.WinUI.Converters;
@@ -9,8 +10,22 @@ namespace CommunityToolkit.WinUI.Converters;
 /// <summary>
 /// Gets the approximated display name for the color.
 /// </summary>
-public partial class ColorToDisplayNameConverter : IValueConverter
+public partial class ColorToDisplayNameConverter : IValueConverter, IStaticConverter<Color, string>
 {
+    /// <inheritdoc/>
+    public static string Convert(Color value)
+    {
+#if WINDOWS_UWP && NET8_0_OR_GREATER
+        // Windows.UI.ColorHelper not yet supported on modern uwp.
+        // Following advice from Sergio0694
+        return value.ToString();
+#elif WINUI2
+        return Windows.UI.ColorHelper.ToDisplayName(value);
+#elif WINUI3
+        return Microsoft.UI.ColorHelper.ToDisplayName(value);
+#endif
+    }
+
     /// <inheritdoc/>
     public object Convert(
         object value,
@@ -34,15 +49,7 @@ public partial class ColorToDisplayNameConverter : IValueConverter
             return DependencyProperty.UnsetValue;
         }
 
-#if WINDOWS_UWP && NET8_0_OR_GREATER
-        // Windows.UI.ColorHelper not yet supported on modern uwp.
-        // Following advice from Sergio0694
-        return color.ToString();
-#elif WINUI2
-        return Windows.UI.ColorHelper.ToDisplayName(color);
-#elif WINUI3
-        return Microsoft.UI.ColorHelper.ToDisplayName(color);
-#endif
+        return Convert(color);
     }
 
     /// <inheritdoc/>

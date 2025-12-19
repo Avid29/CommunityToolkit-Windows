@@ -2,12 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using CommunityToolkit.WinUI.ConvertersRns;
+
 namespace CommunityToolkit.WinUI.Converters;
 
 /// <summary>
 /// Value converter that applies NOT operator to a <see cref="bool"/> value.
 /// </summary>
-public partial class BoolNegationConverter : IValueConverter
+public partial class BoolNegationConverter : IValueConverter, IStaticConverter<bool, bool>
 {
     /// <summary>
     /// Convert a boolean value to its negation.
@@ -34,4 +36,7 @@ public partial class BoolNegationConverter : IValueConverter
     {
         return !(value is bool && (bool)value);
     }
+
+    /// <inheritdoc/>
+    public static bool Convert(bool value) => !value;
 }
