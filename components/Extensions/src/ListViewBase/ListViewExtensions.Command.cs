@@ -14,7 +14,8 @@ public static partial class ListViewExtensions
     /// <summary>
     /// Attached <see cref="DependencyProperty"/> for binding an <see cref="global::System.Windows.Input.ICommand"/> to handle ListViewBase Item interaction by means of <see cref="ListViewBase"/> ItemClick event. ListViewBase IsItemClickEnabled must be set to true.
     /// </summary>
-    public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(ListViewExtensions), new PropertyMetadata(null, OnCommandPropertyChanged));
+    public static readonly DependencyProperty CommandProperty =
+        DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(ListViewExtensions), new PropertyMetadata(null, OnCommandPropertyChanged));
 
     /// <summary>
     /// Gets the <see cref="ICommand"/> associated with the specified <see cref="ListViewBase"/>
@@ -38,21 +39,17 @@ public static partial class ListViewExtensions
 
     private static void OnCommandPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
-        var listViewBase = sender as ListViewBase;
-
-        if (listViewBase == null)
-        {
+        if (sender is not ListViewBase listViewBase)
             return;
-        }
 
         var oldCommand = args.OldValue as ICommand;
-        if (oldCommand != null)
+        if (oldCommand is not null)
         {
             listViewBase.ItemClick -= OnListViewBaseItemClick;
         }
 
         var newCommand = args.NewValue as ICommand;
-        if (newCommand != null)
+        if (newCommand is not null)
         {
             listViewBase.ItemClick += OnListViewBaseItemClick;
         }
@@ -60,18 +57,16 @@ public static partial class ListViewExtensions
 
     private static void OnListViewBaseItemClick(object sender, ItemClickEventArgs e)
     {
-        if (sender is ListViewBase listViewBase)
-        {
-            var command = GetCommand(listViewBase);
-            if (listViewBase == null || command == null)
-            {
-                return;
-            }
+        if (sender is not ListViewBase listViewBase)
+            return;
 
-            if (command.CanExecute(e.ClickedItem))
-            {
-                command.Execute(e.ClickedItem);
-            }
+        var command = GetCommand(listViewBase);
+        if (command is null)
+            return;
+
+        if (command.CanExecute(e.ClickedItem))
+        {
+            command.Execute(e.ClickedItem);
         }
     }
 }
