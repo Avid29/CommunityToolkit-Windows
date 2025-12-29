@@ -13,7 +13,7 @@ public static partial class ListViewExtensions
     /// Smooth scrolling the list to bring the specified index into view
     /// </summary>
     /// <param name="listViewBase">List to scroll</param>
-    /// <param name="index">The index to bring into view. Index can be negative.</param>
+    /// <param name="index">The index to bring into view. Negative indicies will be used as an offset from the end.</param>
     /// <param name="itemPlacement">Set the item placement after scrolling</param>
     /// <param name="disableAnimation">Set true to disable animation</param>
     /// <param name="scrollIfVisible">Set false to disable scrolling when the corresponding item is in view</param>
@@ -22,32 +22,26 @@ public static partial class ListViewExtensions
     /// <returns>Returns <see cref="Task"/> that completes after scrolling</returns>
     public static async Task SmoothScrollIntoViewWithIndexAsync(this ListViewBase listViewBase, int index, ScrollItemPlacement itemPlacement = ScrollItemPlacement.Default, bool disableAnimation = false, bool scrollIfVisible = true, int additionalHorizontalOffset = 0, int additionalVerticalOffset = 0)
     {
-        if (index > (listViewBase.Items.Count - 1))
+        // Clamp index to valid range and adjust negative indicies to be used as an offset from the end
+        index = Math.Clamp(index, -listViewBase.Items.Count, listViewBase.Items.Count - 1);
+        if (index < 0)
         {
-            index = listViewBase.Items.Count - 1;
+            index += listViewBase.Items.Count;
         }
 
-        if (index < -listViewBase.Items.Count)
-        {
-            index = -listViewBase.Items.Count;
-        }
-
-        index = (index < 0) ? (index + listViewBase.Items.Count) : index;
-
-        bool isVirtualizing = default;
-        double previousXOffset = default, previousYOffset = default;
+        bool isVirtualizing = false;
+        double previousXOffset = 0;
+        double previousYOffset = 0;
 
         var scrollViewer = listViewBase.FindDescendant<ScrollViewer>();
         var selectorItem = listViewBase.ContainerFromIndex(index) as SelectorItem;
 
-        if (scrollViewer == null)
-        {
+        if (scrollViewer is null)
             return;
-        }
 
         // If selectorItem is null then the panel is virtualized.
         // So in order to get the container of the item we need to scroll to that item first and then use ContainerFromIndex
-        if (selectorItem == null)
+        if (selectorItem is null)
         {
             isVirtualizing = true;
 
@@ -86,24 +80,22 @@ public static partial class ListViewExtensions
         var listViewBaseHeight = listViewBase.ActualHeight;
         var selectorItemHeight = selectorItem.ActualHeight;
 
+        // Store the previous absolute offsets of the scroll viewer
         previousXOffset = scrollViewer.HorizontalOffset;
         previousYOffset = scrollViewer.VerticalOffset;
 
+        // Calculate min and max positions to bring the item fully into view
         var minXPosition = position.X - listViewBaseWidth + selectorItemWidth;
         var minYPosition = position.Y - listViewBaseHeight + selectorItemHeight;
-
         var maxXPosition = position.X;
         var maxYPosition = position.Y;
 
-        double finalXPosition, finalYPosition;
+        // Declare final positions with a default of the previous offsets
+        double finalXPosition = previousXOffset;
+        double finalYPosition = previousYOffset;
 
-        // If the Item is in view and scrollIfVisible is false then we don't need to scroll
-        if (!scrollIfVisible && (previousXOffset <= maxXPosition && previousXOffset >= minXPosition) && (previousYOffset <= maxYPosition && previousYOffset >= minYPosition))
-        {
-            finalXPosition = previousXOffset;
-            finalYPosition = previousYOffset;
-        }
-        else
+        // If scrollIfVisible is true or the item is not fully visible, calculate new offsets
+        if (scrollIfVisible || previousXOffset > maxXPosition || previousXOffset < minXPosition || previousYOffset > maxYPosition || previousYOffset < minYPosition)
         {
             switch (itemPlacement)
             {
@@ -147,10 +139,10 @@ public static partial class ListViewExtensions
                     break;
 
                 case ScrollItemPlacement.Center:
-                    var centreX = (listViewBaseWidth - selectorItemWidth) / 2.0;
-                    var centreY = (listViewBaseHeight - selectorItemHeight) / 2.0;
-                    finalXPosition = maxXPosition - centreX + additionalHorizontalOffset;
-                    finalYPosition = maxYPosition - centreY + additionalVerticalOffset;
+                    var centerX = (listViewBaseWidth - selectorItemWidth) / 2.0;
+                    var centerY = (listViewBaseHeight - selectorItemHeight) / 2.0;
+                    finalXPosition = maxXPosition - centerX + additionalHorizontalOffset;
+                    finalYPosition = maxYPosition - centerY + additionalVerticalOffset;
                     break;
 
                 case ScrollItemPlacement.Right:
@@ -197,31 +189,17 @@ public static partial class ListViewExtensions
     /// <param name="verticalOffset">The vertical offset.</param>
     /// <param name="zoomFactor">The zoom factor.</param>
     /// <param name="disableAnimation">if set to <c>true</c> disable animation.</param>
-    private static async Task ChangeViewAsync(this ScrollViewer scrollViewer, double? horizontalOffset, double? verticalOffset, float? zoomFactor, bool disableAnimation)
+    private static async Task ChangeViewAsync(this ScrollViewer scrollViewer, double horizontalOffset, double verticalOffset, float? zoomFactor, bool disableAnimation)
     {
-        if (horizontalOffset > scrollViewer.ScrollableWidth)
-        {
-            horizontalOffset = scrollViewer.ScrollableWidth;
-        }
-        else if (horizontalOffset < 0)
-        {
-            horizontalOffset = 0;
-        }
+        // Clamp offsets to valid range
+        horizontalOffset = Math.Clamp(horizontalOffset, 0, scrollViewer.ScrollableWidth);
+        verticalOffset = Math.Clamp(verticalOffset, 0, scrollViewer.ScrollableHeight);
 
-        if (verticalOffset > scrollViewer.ScrollableHeight)
-        {
-            verticalOffset = scrollViewer.ScrollableHeight;
-        }
-        else if (verticalOffset < 0)
-        {
-            verticalOffset = 0;
-        }
-
-        // MUST check this and return immediately, otherwise this async task will never complete because ViewChanged event won't get triggered
-        if (horizontalOffset == scrollViewer.HorizontalOffset && verticalOffset == scrollViewer.VerticalOffset)
-        {
+        // Ensure the offsets are not already at the requested position
+        // This MUST be done to prevent deadlock. The ViewChanged event will not fire if the offsets do not change.
+        if (horizontalOffset == scrollViewer.HorizontalOffset &&
+            verticalOffset == scrollViewer.VerticalOffset)
             return;
-        }
 
         var tcs = new TaskCompletionSource<object?>();
 
