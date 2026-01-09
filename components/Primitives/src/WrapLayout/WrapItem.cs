@@ -13,9 +13,9 @@ internal class WrapItem
 
     public int Index { get; }
 
-    public UvMeasure? Measure { get; internal set; }
+    public UVCoord? Measure { get; internal set; }
 
-    public UvMeasure? Position { get; internal set; }
+    public UVCoord? Position { get; internal set; }
 
     public UIElement? Element { get; internal set; }
 }

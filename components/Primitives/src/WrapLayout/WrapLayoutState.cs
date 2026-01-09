@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.UI.Xaml.Controls;
-
 namespace CommunityToolkit.WinUI.Controls;
 
 internal class WrapLayoutState
@@ -18,7 +16,7 @@ internal class WrapLayoutState
 
     public Orientation Orientation { get; private set; }
 
-    public UvMeasure Spacing { get; internal set; }
+    public UVCoord Spacing { get; internal set; }
 
     public double AvailableU { get; internal set; }
 
@@ -87,7 +85,7 @@ internal class WrapLayoutState
             return 0;
         }
 
-        UvMeasure? lastPosition = null;
+        UVCoord? lastPosition = null;
         double maxV = 0;
 
         for (var i = _items.Count - 1; i >= 0; --i)

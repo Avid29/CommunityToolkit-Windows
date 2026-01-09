@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.UI.Xaml.Controls;
 using System.Collections.Specialized;
 
 namespace CommunityToolkit.WinUI.Controls;
@@ -133,8 +132,8 @@ public partial class WrapLayout : VirtualizingLayout
     /// <inheritdoc />
     protected override Size MeasureOverride(VirtualizingLayoutContext context, Size availableSize)
     {
-        var parentMeasure = new UvMeasure(Orientation, availableSize);
-        var spacingMeasure = new UvMeasure(Orientation, new Size(HorizontalSpacing, VerticalSpacing));
+        var parentMeasure = new UVCoord(availableSize, Orientation);
+        var spacingMeasure = new UVCoord(HorizontalSpacing, VerticalSpacing, Orientation);
 
         var state = (WrapLayoutState)context.LayoutState;
         if (state.Orientation != Orientation)
@@ -150,8 +149,8 @@ public partial class WrapLayout : VirtualizingLayout
         }
 
         double currentV = 0;
-        var realizationBounds = new UvBounds(Orientation, context.RealizationRect);
-        var position = new UvMeasure();
+        var realizationBounds = new UVRect(context.RealizationRect, Orientation);
+        var position = new UVCoord(Orientation);
         for (var i = 0; i < context.ItemCount; ++i)
         {
             var measured = false;
@@ -160,7 +159,7 @@ public partial class WrapLayout : VirtualizingLayout
             {
                 item.Element = context.GetOrCreateElementAt(i);
                 item.Element.Measure(availableSize);
-                item.Measure = new UvMeasure(Orientation, item.Element.DesiredSize);
+                item.Measure = new UVCoord(item.Element.DesiredSize, Orientation);
                 measured = true;
             }
 
@@ -182,7 +181,7 @@ public partial class WrapLayout : VirtualizingLayout
             position = item.Position.Value;
 
             var vEnd = position.V + currentMeasure.V;
-            if (vEnd < realizationBounds.VMin)
+            if (vEnd < realizationBounds.V)
             {
                 // Item is "above" the bounds
                 if (item.Element is not null)
@@ -193,7 +192,7 @@ public partial class WrapLayout : VirtualizingLayout
 
                 continue;
             }
-            else if (position.V > realizationBounds.VMax)
+            else if (position.V > realizationBounds.HighPosition.V)
             {
                 // Item is "below" the bounds.
                 if (item.Element is not null)
@@ -211,7 +210,7 @@ public partial class WrapLayout : VirtualizingLayout
                 item.Element = context.GetOrCreateElementAt(i);
                 item.Element.Measure(availableSize);
 
-                currentMeasure = new UvMeasure(Orientation, item.Element.DesiredSize);
+                currentMeasure = new UVCoord(item.Element.DesiredSize, Orientation);
                 if (currentMeasure != item.Measure)
                 {
                     // this item changed size; we need to recalculate layout for everything after this
@@ -244,13 +243,13 @@ public partial class WrapLayout : VirtualizingLayout
         // axis to the panel. Clearing to zero prevents the crash.
         // This is likely an incorrect use of the control by the developer, however we need stability here so setting a default that won't crash.
 
-        var totalMeasure = new UvMeasure
+        var totalMeasure = new UVCoord(Orientation)
         {
             U = double.IsInfinity(parentMeasure.U) ? 0 : Math.Ceiling(parentMeasure.U),
             V = state.GetHeight()
         };
 
-        return totalMeasure.GetSize(Orientation);
+        return totalMeasure;
     }
 
     /// <inheritdoc />
@@ -258,7 +257,7 @@ public partial class WrapLayout : VirtualizingLayout
     {
         if (context.ItemCount > 0)
         {
-            var realizationBounds = new UvBounds(Orientation, context.RealizationRect);
+            var realizationBounds = new UVRect(context.RealizationRect, Orientation);
 
             var state = (WrapLayoutState)context.LayoutState;
             bool ArrangeItem(WrapItem item)
@@ -272,13 +271,13 @@ public partial class WrapLayout : VirtualizingLayout
 
                 var position = item.Position.Value;
 
-                if (realizationBounds.VMin <= position.V + desiredMeasure.V && position.V <= realizationBounds.VMax)
+                if (realizationBounds.V <= position.V + desiredMeasure.V && position.V <= realizationBounds.HighPosition.V)
                 {
                     // place the item
                     var child = context.GetOrCreateElementAt(item.Index);
-                    child.Arrange(new Rect(position.GetPoint(Orientation), desiredMeasure.GetSize(Orientation)));
+                    child.Arrange(new Rect(position, (Size)desiredMeasure));
                 }
-                else if (position.V > realizationBounds.VMax)
+                else if (position.V > realizationBounds.HighPosition.V)
                 {
                     return false;
                 }
