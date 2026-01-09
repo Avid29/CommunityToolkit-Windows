@@ -78,24 +78,24 @@ public sealed partial class WrapPanelSample : Page
             }
         }
     }
+}
 
-    public class PhotoDataItemWithDimension : PhotoDataItem
+public class PhotoDataItemWithDimension : PhotoDataItem
+{
+    public double Width { get; set; }
+    public double Height { get; set; }
+}
+
+public class PhotoDataItem
+{
+    public string? Title { get; set; }
+
+    public string? Category { get; set; }
+
+    public string? Thumbnail { get; set; }
+
+    public override string ToString()
     {
-        public double Width { get; set; }
-        public double Height { get; set; }
-    }
-
-    public class PhotoDataItem
-    {
-        public string? Title { get; set; }
-
-        public string? Category { get; set; }
-
-        public string? Thumbnail { get; set; }
-
-        public override string ToString()
-        {
-            return Title!;
-        }
+        return Title!;
     }
 }
