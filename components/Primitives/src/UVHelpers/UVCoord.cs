@@ -69,6 +69,7 @@ public struct UVCoord
             {
                 X = value;
             }
+            else
             {
                 Y = value;
             }
@@ -87,6 +88,7 @@ public struct UVCoord
             {
                 X = value;
             }
+            else
             {
                 Y = value;
             }
