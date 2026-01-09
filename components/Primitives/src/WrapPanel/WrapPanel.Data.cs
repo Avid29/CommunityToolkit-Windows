@@ -9,80 +9,35 @@ namespace CommunityToolkit.WinUI.Controls;
 /// </summary>
 public partial class WrapPanel
 {
-    [DebuggerDisplay("U = {U} V = {V}")]
-    private struct UvMeasure
-    {
-        internal static UvMeasure Zero => default;
-
-        internal double U { get; set; }
-
-        internal double V { get; set; }
-
-        public UvMeasure(Orientation orientation, Size size)
-            : this(orientation, size.Width, size.Height)
-        {
-        }
-
-        public UvMeasure(Orientation orientation, double width, double height)
-        {
-            if (orientation == Orientation.Horizontal)
-            {
-                U = width;
-                V = height;
-            }
-            else
-            {
-                U = height;
-                V = width;
-            }
-        }
-
-        public UvMeasure Add(double u, double v)
-            => new UvMeasure { U = U + u, V = V + v };
-
-        public UvMeasure Add(UvMeasure measure)
-            => Add(measure.U, measure.V);
-
-        public Size ToSize(Orientation orientation)
-            => orientation == Orientation.Horizontal ? new Size(U, V) : new Size(V, U);
-    }
-
-    private struct UvRect
-    {
-        public UvMeasure Position { get; set; }
-
-        public UvMeasure Size { get; set; }
-
-        public Rect ToRect(Orientation orientation) => orientation switch
-        {
-            Orientation.Vertical => new Rect(Position.V, Position.U, Size.V, Size.U),
-            Orientation.Horizontal => new Rect(Position.U, Position.V, Size.U, Size.V),
-            _ => ThrowArgumentException()
-        };
-
-        private static Rect ThrowArgumentException() => throw new ArgumentException("The input orientation is not valid.");
-    }
-
     private struct Row
     {
-        public Row(List<UvRect> childrenRects, UvMeasure size)
+        public Row(List<UVRect> childrenRects, UVCoord size)
         {
             ChildrenRects = childrenRects;
             Size = size;
         }
 
-        public List<UvRect> ChildrenRects { get; }
+        public List<UVRect> ChildrenRects { get; }
 
-        public UvMeasure Size { get; set; }
+        public UVCoord Size { get; set; }
 
-        public UvRect Rect => ChildrenRects.Count > 0 ?
-            new UvRect { Position = ChildrenRects[0].Position, Size = Size } :
-            new UvRect { Position = UvMeasure.Zero, Size = Size };
-
-        public void Add(UvMeasure position, UvMeasure size)
+        public UVRect Rect
         {
-            ChildrenRects.Add(new UvRect { Position = position, Size = size });
-            Size = new UvMeasure
+            get
+            {
+                if (ChildrenRects.Count is 0)
+                {
+                    return new UVRect(new Point(0, 0), (Size)Size, Size.Orientation);
+                }
+
+                return new UVRect(ChildrenRects[0].Position, (Size)Size, Size.Orientation);            
+            }
+        }
+
+        public void Add(UVCoord position, UVCoord size)
+        {
+            ChildrenRects.Add(new UVRect(position, (Size)size, position.Orientation));
+            Size = new UVCoord(position.Orientation)
             {
                 U = position.U + size.U,
                 V = Math.Max(Size.V, size.V),

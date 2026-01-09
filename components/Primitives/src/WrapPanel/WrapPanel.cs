@@ -129,7 +129,7 @@ public partial class WrapPanel : Panel
         }
     }
 
-    private readonly List<Row> _rows = new List<Row>();
+    private readonly List<Row> _rows = [];
 
     /// <inheritdoc />
     protected override Size MeasureOverride(Size availableSize)
@@ -172,13 +172,8 @@ public partial class WrapPanel : Panel
                         child = Children[childIndex++];
                     }
 
-                    var arrangeRect = new UvRect
-                    {
-                        Position = rect.Position,
-                        Size = new UvMeasure { U = rect.Size.U, V = row.Size.V },
-                    };
-
-                    var finalRect = arrangeRect.ToRect(Orientation);
+                    UVRect finalRect = rect;
+                    finalRect.VSize = row.Size.V;
                     child.Arrange(finalRect);
                 }
             }
@@ -191,21 +186,20 @@ public partial class WrapPanel : Panel
     {
         _rows.Clear();
 
-        var paddingStart = new UvMeasure(Orientation, Padding.Left, Padding.Top);
-        var paddingEnd = new UvMeasure(Orientation, Padding.Right, Padding.Bottom);
+        var paddingStart = new UVCoord(Padding.Left, Padding.Top, Orientation);
+        var paddingEnd = new UVCoord(Padding.Right, Padding.Bottom, Orientation);
 
         if (Children.Count == 0)
         {
-            var emptySize = paddingStart.Add(paddingEnd).ToSize(Orientation);
-            return emptySize;
+            return paddingStart + paddingEnd;
         }
 
-        var parentMeasure = new UvMeasure(Orientation, availableSize.Width, availableSize.Height);
-        var spacingMeasure = new UvMeasure(Orientation, HorizontalSpacing, VerticalSpacing);
-        var position = new UvMeasure(Orientation, Padding.Left, Padding.Top);
+        var availableUVSize = new UVCoord(availableSize, Orientation);
+        var uvSpacing = new UVCoord(HorizontalSpacing, VerticalSpacing, Orientation);
+        var uvPosition = new UVCoord(Padding.Left, Padding.Top, Orientation);
 
-        var currentRow = new Row(new List<UvRect>(), default);
-        var finalMeasure = new UvMeasure(Orientation, width: 0.0, height: 0.0);
+        var currentRow = new Row([], default);
+        var finalMeasure = new UVCoord(0, 0, Orientation);
         void Arrange(UIElement child, bool isLast = false)
         {
             if (child.Visibility == Visibility.Collapsed)
@@ -213,29 +207,29 @@ public partial class WrapPanel : Panel
                 return; // if an item is collapsed, avoid adding the spacing
             }
 
-            var desiredMeasure = new UvMeasure(Orientation, child.DesiredSize);
-            if ((desiredMeasure.U + position.U + paddingEnd.U) > parentMeasure.U || position.U >= parentMeasure.U)
+            var desiredSize = new UVCoord(child.DesiredSize, Orientation);
+            if ((desiredSize.U + uvPosition.U + paddingEnd.U) > availableUVSize.U || uvPosition.U >= availableUVSize.U)
             {
                 // next row!
-                position.U = paddingStart.U;
-                position.V += currentRow.Size.V + spacingMeasure.V;
+                uvPosition.U = paddingStart.U;
+                uvPosition.V += currentRow.Size.V + uvSpacing.V;
 
                 _rows.Add(currentRow);
-                currentRow = new Row(new List<UvRect>(), default);
+                currentRow = new Row([], default);
             }
 
             // Stretch the last item to fill the available space
             // if the parent measure is not infinite
-            if (isLast && !double.IsInfinity(parentMeasure.U))
+            if (isLast && !double.IsInfinity(availableUVSize.U))
             {
-                desiredMeasure.U = parentMeasure.U - position.U;
+                desiredSize.U = availableUVSize.U - uvPosition.U;
             }
 
-            currentRow.Add(position, desiredMeasure);
+            currentRow.Add(uvPosition, desiredSize);
 
             // adjust the location for the next items
-            position.U += desiredMeasure.U + spacingMeasure.U;
-            finalMeasure.U = Math.Max(finalMeasure.U, position.U);
+            uvPosition.U += desiredSize.U + uvSpacing.U;
+            finalMeasure.U = Math.Max(finalMeasure.U, uvPosition.U);
         }
 
         var lastIndex = Children.Count - 1;
@@ -252,14 +246,13 @@ public partial class WrapPanel : Panel
 
         if (_rows.Count == 0)
         {
-            var emptySize = paddingStart.Add(paddingEnd).ToSize(Orientation);
-            return emptySize;
+            return paddingStart + paddingEnd;
         }
 
         // Get max V here before computing final rect
         var lastRowRect = _rows.Last().Rect;
         finalMeasure.V = lastRowRect.Position.V + lastRowRect.Size.V;
-        var finalRect = finalMeasure.Add(paddingEnd).ToSize(Orientation);
+        var finalRect = finalMeasure + paddingEnd;
         return finalRect;
     }
 }
