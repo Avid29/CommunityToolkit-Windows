@@ -89,6 +89,28 @@ public partial class DoubleToObjectConverter : DependencyObject, IValueConverter
     }
 
     /// <summary>
+    /// Convert a double to an object based when whether or not it false in a range.
+    /// </summary>
+    /// <param name="value">The value to range check.</param>
+    /// <param name="greaterThan">The lower-bound of the range check.</param>
+    /// <param name="lessThan">The upper-bound of the range check.</param>
+    /// <param name="trueObject">The object to return if the value is in the range.</param>
+    /// <param name="falseObject">The object to return if the value is outside of the range.</param>
+    /// <returns></returns>
+    public static object Convert(double value, double greaterThan, double lessThan, object trueObject, object falseObject)
+    {
+        bool boolValue = IsInRange(value, greaterThan, lessThan);
+        return boolValue ? trueObject : falseObject;
+    }
+
+    private static bool IsInRange(double value, double greaterThan, double lessThan)
+    {
+        bool aboveLowerBound = (double.IsNaN(greaterThan) || value > greaterThan);
+        bool belowUpperBound = (double.IsNaN(lessThan) || value < lessThan);
+        return aboveLowerBound && belowUpperBound;
+    }
+
+    /// <summary>
     /// Convert a boolean value to an other object.
     /// </summary>
     /// <param name="value">The source data being passed to the target.</param>
@@ -113,23 +135,7 @@ public partial class DoubleToObjectConverter : DependencyObject, IValueConverter
             vd = result;
         }
 
-        var boolValue = false;
-
-        if (!double.IsNaN(GreaterThan) && !double.IsNaN(LessThan))
-        {
-            if (vd > GreaterThan && vd < LessThan)
-            {
-                boolValue = true;
-            }
-        }
-        else if (!double.IsNaN(GreaterThan) && vd > GreaterThan)
-        {
-            boolValue = true;
-        }
-        else if (!double.IsNaN(LessThan) && vd < LessThan)
-        {
-            boolValue = true;
-        }
+        bool boolValue = IsInRange(vd, GreaterThan, LessThan);
 
         // Negate if needed
         if (ConverterTools.TryParseBool(parameter))

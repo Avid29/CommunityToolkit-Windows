@@ -21,8 +21,5 @@ public partial class BoolToVisibilityConverter : BoolToObjectConverter, IStaticC
     }
 
     /// <inheritdoc/>
-    public static Visibility Convert(bool value)
-    {
-        return value ? Visibility.Visible : Visibility.Collapsed;
-    }
+    public static Visibility Convert(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
 }

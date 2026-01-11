@@ -11,6 +11,9 @@ namespace CommunityToolkit.WinUI.Converters;
 /// </summary>
 public partial class BoolNegationConverter : IValueConverter, IStaticConverter<bool, bool>
 {
+    /// <inheritdoc/>
+    public static bool Convert(bool value) => !value;
+
     /// <summary>
     /// Convert a boolean value to its negation.
     /// </summary>
@@ -20,9 +23,7 @@ public partial class BoolNegationConverter : IValueConverter, IStaticConverter<b
     /// <param name="language">The language of the conversion. Not used</param>
     /// <returns>The value to be passed to the target dependency property.</returns>
     public object Convert(object value, Type targetType, object parameter, string language)
-    {
-        return !(value is bool && (bool)value);
-    }
+        => !(value is bool && (bool)value);
 
     /// <summary>
     /// Convert back a boolean value to its negation.
@@ -33,10 +34,5 @@ public partial class BoolNegationConverter : IValueConverter, IStaticConverter<b
     /// <param name="language">The language of the conversion. Not used</param>
     /// <returns>The value to be passed to the target dependency property.</returns>
     public object ConvertBack(object value, Type targetType, object parameter, string language)
-    {
-        return !(value is bool && (bool)value);
-    }
-
-    /// <inheritdoc/>
-    public static bool Convert(bool value) => !value;
+        => !(value is bool && (bool)value);
 }

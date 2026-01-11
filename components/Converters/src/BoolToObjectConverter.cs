@@ -41,6 +41,16 @@ public partial class BoolToObjectConverter : DependencyObject, IValueConverter
     }
 
     /// <summary>
+    /// Select an object based on the <paramref name="value"/>.
+    /// </summary>
+    /// <param name="value">The boolean for which object to select.</param>
+    /// <param name="trueObject">The value to return if true.</param>
+    /// <param name="falseObject">The value to return if false.</param>
+    /// <returns><paramref name="trueObject"/> if <paramref name="value"/> is true, <paramref name="falseObject"/> otherwise.</returns>
+    public static object Convert(bool value, object trueObject, object falseObject)
+        => value ? trueObject : falseObject;
+
+    /// <summary>
     /// Convert a boolean value to an other object.
     /// </summary>
     /// <param name="value">The source data being passed to the target.</param>
@@ -58,7 +68,8 @@ public partial class BoolToObjectConverter : DependencyObject, IValueConverter
             boolValue = !boolValue;
         }
 
-        return ConverterTools.Convert(boolValue ? TrueValue : FalseValue, targetType);
+        var obj = Convert(boolValue, TrueValue, FalseValue);
+        return ConverterTools.Convert(obj, targetType);
     }
 
     /// <summary>
