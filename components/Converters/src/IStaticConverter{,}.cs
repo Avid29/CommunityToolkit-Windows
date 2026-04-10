@@ -14,7 +14,7 @@ public interface IStaticConverter<TFrom, TTo>
     /// <summary>
     /// Apply the convert operation.
     /// </summary>
-    /// <param name="value">The value to convert from</param>
+    /// <param name="value">The value to convert from.</param>
     /// <returns>The converted value.</returns>
     static abstract TTo Convert(TFrom value);
 }

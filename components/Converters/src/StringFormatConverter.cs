@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using CommunityToolkit.WinUI.ConvertersRns;
 using System.Globalization;
 
 namespace CommunityToolkit.WinUI.Converters;
@@ -9,8 +10,11 @@ namespace CommunityToolkit.WinUI.Converters;
 /// <summary>
 /// This class provides a binding converter to display formatted strings
 /// </summary>
-public partial class StringFormatConverter : IValueConverter
+public partial class StringFormatConverter : IValueConverter, IStaticConverter<object, string, string>
 {
+    /// <inheritdoc/>
+    public static string Convert(object value, string param) => string.Format(param, value);
+
     /// <summary>
     /// Return the formatted string version of the source object.
     /// </summary>
